@@ -16,7 +16,7 @@ cabal-version:        >=1.10
 executable Something
   ghc-options:
     -threaded
-  main-is:              gp.hs
+  main-is:              Main.hs
   -- other-modules:
   -- other-extensions:
   build-depends:        linear, GPipe, lens, GPipe-GLFW, base >= 4.7 && < 5
