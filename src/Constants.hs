@@ -8,6 +8,9 @@ fWidth, fHeight :: (Num a) => a
 fWidth = 800
 fHeight = 600
 
+fps :: (Num a) => a
+fps = 60
+
 gTitle :: String
 gTitle = "Fasdjkl"
 
