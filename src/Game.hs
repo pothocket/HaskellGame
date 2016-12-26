@@ -7,6 +7,7 @@ import Graphics.GPipe.PrimitiveArray
 import Control.Lens
 
 import Util
+import Constants
 
 -------------------------------------------------------------------------
 
@@ -26,12 +27,22 @@ makeLenses ''Entity
 makeLenses ''EntityInfo
 
 -------------------------------------------------------------------------
+--World Code--
 
 initWorld :: World
 initWorld = World [newBox] 0
 
+updateWorld :: Int -> World -> World
+updateWorld dt = (entities %~ fmap (updatePos dt))
 
 -------------------------------------------------------------------------
+--Entity Code--
+
+updatePos :: Int -> Entity -> Entity
+updatePos dt ent = (eInfo . ePos) +~ (ent ^. eInfo . eVel * (fromIntegral dt) / (1000/fps)) $ ent
+
+-------------------------------------------------------------------------
+--Models--
 
 boxModel :: EntityModel
 boxModel = (TriangleStrip, 
@@ -51,4 +62,5 @@ idkModel = (TriangleStrip,
 
 
 newBox :: Entity
-newBox = Box $ EntityInfo boxModel (V2 0 0) (V2 0 0)
+newBox = Box $ EntityInfo boxModel (V2 0 0) (V2 1 0)
+
