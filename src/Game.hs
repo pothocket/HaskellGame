@@ -6,7 +6,12 @@ import Linear
 import Graphics.GPipe.PrimitiveArray
 import Control.Lens
 
-data World = World { _entities :: [Entity] }
+import Util
+
+-------------------------------------------------------------------------
+
+data World = World { _entities :: [Entity]
+                   , _timeMS :: Int}
 
 data Entity = Box {_eInfo :: EntityInfo}
 
@@ -23,7 +28,8 @@ makeLenses ''EntityInfo
 -------------------------------------------------------------------------
 
 initWorld :: World
-initWorld = World [newBox]
+initWorld = World [newBox] 0
+
 
 -------------------------------------------------------------------------
 

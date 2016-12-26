@@ -7,6 +7,11 @@ import Graphics.GPipe.Context.GLFW (newContext', GLFWWindow, WindowConf)
 import qualified "GPipe-GLFW" Graphics.GPipe.Context.GLFW as GLFW
 
 import Control.Monad
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Class (lift)
+
+import System.IO (hSetBuffering, BufferMode(..), stdout)
+
 import Control.Arrow ((>>>))
 import Control.Lens
 
@@ -14,6 +19,8 @@ import Constants
 import Shader
 import Game
 import Body
+
+import Util
 
 theWindow :: ContextFactory c ds GLFWWindow
 theWindow = newContext' [] (GLFW.WindowConf gWidth gHeight gTitle)
@@ -24,6 +31,7 @@ main = runContextT theWindow (ContextFormatColor RGB8) $ do
     posBuffer :: Buffer os (B2 Float) <- newBuffer 1
     writeBuffer vertexBuffer 0 $ map (,(V3 1 1 1)) (map ((+(V2 1 (0))) . toGLPos) myTriangle)
     writeBuffer posBuffer 0 $ fmap toGLPos [V2 100 250]
+    lift $ hSetBuffering stdout NoBuffering
     
     shader <- compileShader myShader
     loop vertexBuffer posBuffer initWorld shader
@@ -37,6 +45,7 @@ loop :: (Num a, Color c Float ~ V3 a, ContextColorFormat c, b2 ~ (b,b1),
      -> ContextT GLFWWindow os (ContextFormat c ds) IO ()
 loop vb pb world shader = do
     let ent = view (entities . to head) world
+    time1 <- liftIO getTimeMS
     render $ do
         clearContextColor (V3 0 0 0)
         posArray <- newVertexArray pb
@@ -48,9 +57,15 @@ loop vb pb world shader = do
     writeBuffer vb 0 (view (eInfo . eModel . to snd) ent)
     writeBuffer pb 0 [view (eInfo . ePos) ent]
 
+    time2 <- liftIO getTimeMS
+    let dt = time2 - time1
+        newWorld = over timeMS (+dt) world
+
+    lift . print $ view timeMS newWorld
+
     closeRequested <- GLFW.windowShouldClose
     unless closeRequested $
-        loop vb pb world shader
+        loop vb pb newWorld shader
 
 
 myShader :: Shader os (ContextFormat RGBFloat ds) (PrimitiveArray p ((B2 Float, B3 Float), B2 Float)) ()
