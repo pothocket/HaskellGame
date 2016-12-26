@@ -50,22 +50,22 @@ loop vb pb world shader = do
         clearContextColor (V3 0 0 0)
         posArray <- newVertexArray pb
         vertexArray <- newVertexArray vb
-        let primitiveArray = toPrimitiveArrayInstanced (view (eInfo . eModel . to fst) ent) (,) vertexArray posArray
+        let primitiveArray = toPrimitiveArrayInstanced (ent ^. eInfo . eModel . to fst) (,) vertexArray posArray
         shader primitiveArray
     swapContextBuffers
 
-    writeBuffer vb 0 (view (eInfo . eModel . to snd) ent)
-    writeBuffer pb 0 [view (eInfo . ePos) ent]
+    writeBuffer vb 0 (ent ^. eInfo . eModel . to snd)
+    writeBuffer pb 0 [ent ^. eInfo . ePos]
 
     time2 <- liftIO getTimeMS
     let dt = time2 - time1
-        newWorld = over timeMS (+dt) world
-
-    lift . print $ view timeMS newWorld
+        world' = foldr1 (.) [ updateWorld dt
+                              , timeMS +~ dt
+                              ] world
 
     closeRequested <- GLFW.windowShouldClose
     unless closeRequested $
-        loop vb pb newWorld shader
+        loop vb pb world' shader
 
 
 myShader :: Shader os (ContextFormat RGBFloat ds) (PrimitiveArray p ((B2 Float, B3 Float), B2 Float)) ()
