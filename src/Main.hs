@@ -37,7 +37,7 @@ main = runContextT theWindow (ContextFormatColor RGB8) $ do
     loop vertexBuffer posBuffer initWorld shader
 
 loop :: (Num a, Color c Float ~ V3 a, ContextColorFormat c, b2 ~ (b,b1),
-         HostFormat b ~ (V2 Float, V3 Float), HostFormat b1 ~ V2 Float)
+         b ~ (B2 Float, B3 Float), b1 ~ B2 Float)
      => Buffer os b
      -> Buffer os b1
      -> World
@@ -60,8 +60,8 @@ loop vb pb world shader = do
     time2 <- liftIO getTimeMS
     let dt = time2 - time1
         world' = foldr1 (.) [ updateWorld dt
-                              , timeMS +~ dt
-                              ] world
+                            , timeMS +~ dt
+                            ] world
 
     closeRequested <- GLFW.windowShouldClose
     unless closeRequested $
