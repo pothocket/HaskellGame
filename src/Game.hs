@@ -32,14 +32,17 @@ makeLenses ''EntityInfo
 initWorld :: World
 initWorld = World [newBox] 0
 
-updateWorld :: Int -> World -> World
-updateWorld dt = (entities %~ fmap (updatePos dt))
+updateWorld :: V2 Float -> Int -> World -> World
+updateWorld v dt = (entities %~ fmap ((updatePos dt) . (setVel v)))
 
 -------------------------------------------------------------------------
 --Entity Code--
 
 updatePos :: Int -> Entity -> Entity
 updatePos dt ent = (eInfo . ePos) +~ (ent ^. eInfo . eVel * (fromIntegral dt) / (1000/fps)) $ ent
+
+setVel :: V2 Float -> Entity -> Entity
+setVel v = eInfo . eVel .~ v
 
 -------------------------------------------------------------------------
 --Models--

@@ -5,6 +5,7 @@ module Main where
 import Graphics.GPipe
 import Graphics.GPipe.Context.GLFW (newContext', GLFWWindow, WindowConf)
 import qualified "GPipe-GLFW" Graphics.GPipe.Context.GLFW as GLFW
+import Graphics.GPipe.Context.GLFW.Input
 
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
@@ -31,7 +32,9 @@ main = runContextT theWindow (ContextFormatColor RGB8) $ do
     posBuffer :: Buffer os (B2 Float) <- newBuffer 1
     writeBuffer vertexBuffer 0 $ map (,(V3 1 1 1)) (map ((+(V2 1 (0))) . toGLPos) myTriangle)
     writeBuffer posBuffer 0 $ fmap toGLPos [V2 100 250]
+
     lift $ hSetBuffering stdout NoBuffering
+    setKeyCallback $ Just printKey
     
     shader <- compileShader myShader
     loop vertexBuffer posBuffer initWorld shader
@@ -57,15 +60,28 @@ loop vb pb world shader = do
     writeBuffer vb 0 (ent ^. eInfo . eModel . to snd)
     writeBuffer pb 0 [ent ^. eInfo . ePos]
 
+    let [mW, mA, mS, mD] = fmap getKey [Key'W, Key'A, Key'S, Key'D]
+    kW <- mW
+    kA <- mA
+    kS <- mS
+    kD <- mD
+    let vel' = V2 (thing kA kD) (thing kW kS)
+                where thing _ KeyState'Pressed = 1
+                      thing KeyState'Pressed _ = -1
+                      thing KeyState'Released KeyState'Released = 0
+
     time2 <- liftIO getTimeMS
     let dt = time2 - time1
-        world' = foldr1 (.) [ updateWorld dt
+        world' = foldr1 (.) [ updateWorld vel' dt
                             , timeMS +~ dt
                             ] world
 
     closeRequested <- GLFW.windowShouldClose
     unless closeRequested $
         loop vb pb world' shader
+
+printKey :: Key -> Int -> KeyState -> ModifierKeys -> IO ()
+printKey k i s m = putStrLn $ show m ++ "\n" ++ show k ++ " (" ++ show i ++ ") " ++ show s
 
 
 myShader :: Shader os (ContextFormat RGBFloat ds) (PrimitiveArray p ((B2 Float, B3 Float), B2 Float)) ()
