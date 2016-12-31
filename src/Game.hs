@@ -44,7 +44,13 @@ updateWorld keys dt = foldl1 (.) [ processInput keys
                                  ]
 
 processInput :: ControlState -> World -> World
-processInput = flip const
+processInput cs = player . eInfo . eVel .~ (V2 (5*xVel) (5*yVel))
+    where xVel | isDown cs C'Right = 1
+               | isDown cs C'Left  = -1
+               | otherwise         = 0
+          yVel | isDown cs C'Up    = -1
+               | isDown cs C'Down  = 1
+               | otherwise         = 0
 
 -------------------------------------------------------------------------
 --Entity Code--
