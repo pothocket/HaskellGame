@@ -8,13 +8,17 @@ import Control.Lens
 
 import Util
 import Constants
+import Input
 
 -------------------------------------------------------------------------
 
-data World = World { _entities :: [Entity]
-                   , _timeMS :: Int}
+data World = World { _player    :: Player
+                   , _entities :: [Entity]
+                   , _timeMS   :: Int}
+
 
 data Entity = Box {_eInfo :: EntityInfo}
+type Player = Entity
 
 data EntityInfo = EntityInfo { _eModel :: EntityModel
                              , _ePos :: V2 Float
@@ -30,10 +34,17 @@ makeLenses ''EntityInfo
 --World Code--
 
 initWorld :: World
-initWorld = World [newBox] 0
+initWorld = World newBox [] 0
 
-updateWorld :: V2 Float -> Int -> World -> World
-updateWorld v dt = (entities %~ fmap ((updatePos dt) . (setVel v)))
+updateWorld :: ControlState -> Int -> World -> World
+updateWorld keys dt = foldl1 (.) [ processInput keys
+                                 , player %~ updatePos dt
+                                 , entities %~ fmap (updatePos dt)
+                                 , timeMS +~ dt
+                                 ]
+
+processInput :: ControlState -> World -> World
+processInput = flip const
 
 -------------------------------------------------------------------------
 --Entity Code--
@@ -43,6 +54,9 @@ updatePos dt ent = (eInfo . ePos) +~ (ent ^. eInfo . eVel * (fromIntegral dt) / 
 
 setVel :: V2 Float -> Entity -> Entity
 setVel v = eInfo . eVel .~ v
+
+--Player Code--
+
 
 -------------------------------------------------------------------------
 --Models--
@@ -65,5 +79,5 @@ idkModel = (TriangleStrip,
 
 
 newBox :: Entity
-newBox = Box $ EntityInfo boxModel (V2 0 0) (V2 1 0)
+newBox = Box $ EntityInfo boxModel (V2 0 0) (V2 0 0)
 

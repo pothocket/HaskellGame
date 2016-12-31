@@ -20,6 +20,7 @@ import Constants
 import Shader
 import Game
 import Body
+import Input
 
 import Util
 
@@ -47,7 +48,7 @@ loop :: (Num a, Color c Float ~ V3 a, ContextColorFormat c, b2 ~ (b,b1),
      -> CompiledShader os (ContextFormat c ds) (PrimitiveArray Triangles b2)
      -> ContextT GLFWWindow os (ContextFormat c ds) IO ()
 loop vb pb world shader = do
-    let ent = view (entities . to head) world
+    let ent =  world ^. player
     time1 <- liftIO getTimeMS
     render $ do
         clearContextColor (V3 0 0 0)
@@ -60,19 +61,15 @@ loop vb pb world shader = do
     writeBuffer vb 0 (ent ^. eInfo . eModel . to snd)
     writeBuffer pb 0 [ent ^. eInfo . ePos]
 
-    let [mW, mA, mS, mD] = fmap getKey [Key'W, Key'A, Key'S, Key'D]
-    kW <- mW
-    kA <- mA
-    kS <- mS
-    kD <- mD
-    let vel' = V2 (thing kA kD) (thing kW kS)
-                where thing _ KeyState'Pressed = 1
-                      thing KeyState'Pressed _ = -1
-                      thing KeyState'Released KeyState'Released = 0
+    let states :: ContextT GLFWWindow os f IO [KeyState]
+        states = sequence $ map (getKey . getControl) controls
+    let pairs :: ContextT GLFWWindow os f IO [(Control, KeyState)]
+        pairs = zip <$> pure controls <*> states
+    controlState <- fmap (map fst . filter ((==KeyState'Pressed) . snd)) pairs
 
     time2 <- liftIO getTimeMS
     let dt = time2 - time1
-        world' = foldr1 (.) [ updateWorld vel' dt
+        world' = foldr1 (.) [ updateWorld controlState dt
                             , timeMS +~ dt
                             ] world
 
