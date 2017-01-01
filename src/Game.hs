@@ -37,8 +37,8 @@ initWorld :: World
 initWorld = World newBox [] 0
 
 updateWorld :: ControlState -> Int -> World -> World
-updateWorld keys dt = foldl1 (.) [ processInput keys
-                                 , player %~ updatePos dt
+updateWorld keys dt = foldr1 (.) [ processInput keys
+                                 , player %~ updatePlayer dt
                                  , entities %~ fmap (updatePos dt)
                                  , timeMS +~ dt
                                  ]
@@ -63,6 +63,11 @@ setVel v = eInfo . eVel .~ v
 
 --Player Code--
 
+updatePlayer :: Int -> Player -> Player
+updatePlayer dt = handleCollisions . updatePos dt
+
+handleCollisions :: Player -> Player
+handleCollisions = (eInfo . ePos) %~ \(V2 x y) -> V2 (clamp 0 (fWidth - 64) x) (clamp 0 (fHeight - 64) y)
 
 -------------------------------------------------------------------------
 --Models--
