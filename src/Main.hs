@@ -2,6 +2,8 @@
 
 module Main where
 
+import Prelude hiding (id, (.))
+
 import Graphics.GPipe
 import Graphics.GPipe.Context.GLFW (newContext', GLFWWindow, WindowConf)
 import qualified "GPipe-GLFW" Graphics.GPipe.Context.GLFW as GLFW
@@ -10,6 +12,9 @@ import Graphics.GPipe.Context.GLFW.Input
 import Control.Monad
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Class (lift)
+
+import Control.Wire hiding (loop, unless)
+import FRP.Netwire.Move (integral)
 
 import System.IO (hSetBuffering, BufferMode(..), stdout)
 
@@ -38,16 +43,25 @@ main = runContextT theWindow (ContextFormatColor RGB8) $ do
     setKeyCallback $ Just printKey
     
     shader <- compileShader myShader
-    loop vertexBuffer posBuffer initWorld shader
+    loop vertexBuffer posBuffer initWorld shader clockSession_ pos
+
+speed :: Wire s () IO a Float
+speed = pure 50
+
+pos :: HasTime t s => Wire s () IO a (V2 Float)
+pos = V2 <$> integral 0 . speed <*> 0
+
 
 loop :: (Num a, Color c Float ~ V3 a, ContextColorFormat c, b2 ~ (b,b1),
-         b ~ (B2 Float, B3 Float), b1 ~ B2 Float)
+         b ~ (B2 Float, B3 Float), b1 ~ B2 Float, HasTime t s)
      => Buffer os b
      -> Buffer os b1
      -> World
      -> CompiledShader os (ContextFormat c ds) (PrimitiveArray Triangles b2)
+     -> Session IO s
+     -> Wire s e IO a (V2 Float)
      -> ContextT GLFWWindow os (ContextFormat c ds) IO ()
-loop vb pb world shader = do
+loop vb pb world shader session wire = do
     let ent =  world ^. player
     time1 <- liftIO getTimeMS
     render $ do
@@ -58,8 +72,15 @@ loop vb pb world shader = do
         shader primitiveArray
     swapContextBuffers
 
+    (st', session') <- liftIO $ stepSession session
+    (wt', wire') <- liftIO $ stepWire wire st' $ Right undefined
+
+    let p = case wt' of
+              Right vec -> vec
+              Left _ -> V2 0 0
+
     writeBuffer vb 0 (ent ^. eInfo . eModel . to snd)
-    writeBuffer pb 0 [ent ^. eInfo . ePos]
+    writeBuffer pb 0 [p]
 
     let states :: ContextT GLFWWindow os f IO [KeyState]
         states = sequence $ map (getKey . getControl) controls
@@ -75,7 +96,7 @@ loop vb pb world shader = do
 
     closeRequested <- GLFW.windowShouldClose
     unless closeRequested $
-        loop vb pb world' shader
+        loop vb pb world' shader session' wire'
 
 printKey :: Key -> Int -> KeyState -> ModifierKeys -> IO ()
 printKey k i s m = putStrLn $ show m ++ "\n" ++ show k ++ " (" ++ show i ++ ") " ++ show s

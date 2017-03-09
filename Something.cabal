@@ -19,6 +19,6 @@ executable Something
   main-is:              Main.hs
   -- other-modules:
   -- other-extensions:
-  build-depends:        linear, GPipe, lens, GPipe-GLFW, base == 4.9.*, time, transformers, containers
+  build-depends:        linear, GPipe, lens, GPipe-GLFW, base == 4.9.*, time, transformers, containers, netwire
   hs-source-dirs:       src
   default-language:     Haskell2010
