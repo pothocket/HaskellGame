@@ -2,9 +2,17 @@
 
 module Game where
 
+import Prelude hiding ((.))
+
 import Linear
-import Graphics.GPipe.PrimitiveArray
 import Control.Lens
+
+import Control.Wire
+import FRP.Netwire.Move
+
+import Graphics.GPipe.Context
+import Graphics.GPipe.Context.GLFW
+import Graphics.GPipe.PrimitiveArray
 
 import Util
 import Constants
@@ -36,6 +44,9 @@ makeLenses ''EntityInfo
 initWorld :: World
 initWorld = World newBox [] 0
 
+world :: Wire s e (ContextT GLFWWindow os f IO) a World
+
+
 updateWorld :: ControlState -> Int -> World -> World
 updateWorld keys dt = foldr1 (.) [ processInput keys
                                  , player %~ updatePlayer dt
@@ -44,7 +55,7 @@ updateWorld keys dt = foldr1 (.) [ processInput keys
                                  ]
 
 processInput :: ControlState -> World -> World
-processInput cs = player . eInfo . eVel .~ (V2 (5*xVel) (5*yVel))
+processInput cs = player . eInfo . eVel .~ V2 (5*xVel) (5*yVel)
     where xVel | isDown cs C'Right = 1
                | isDown cs C'Left  = -1
                | otherwise         = 0
@@ -56,7 +67,7 @@ processInput cs = player . eInfo . eVel .~ (V2 (5*xVel) (5*yVel))
 --Entity Code--
 
 updatePos :: Int -> Entity -> Entity
-updatePos dt ent = (eInfo . ePos) +~ (ent ^. eInfo . eVel * (fromIntegral dt) / (1000/fps)) $ ent
+updatePos dt ent = (eInfo . ePos) +~ (ent ^. eInfo . eVel * fromIntegral dt / (1000/fps)) $ ent
 
 setVel :: V2 Float -> Entity -> Entity
 setVel v = eInfo . eVel .~ v
@@ -68,6 +79,20 @@ updatePlayer dt = handleCollisions . updatePos dt
 
 handleCollisions :: Player -> Player
 handleCollisions = (eInfo . ePos) %~ \(V2 x y) -> V2 (clamp 0 (fWidth - 64) x) (clamp 0 (fHeight - 64) y)
+
+vel :: Wire s () (ContextT GLFWWindow os f IO) a (V2 Float)
+vel = liftA2 V2 xVel yVel
+    where xVel =  pure pps . isKeyDown C'Right
+              <|> pure (-pps) . isKeyDown C'Left
+              <|> pure 0
+          yVel =  pure (-pps) . isKeyDown C'Up
+              <|> pure pps . isKeyDown C'Down
+              <|> pure 0
+          pps = 300 -- Pixels Per Second
+
+pos :: HasTime t s => Wire s () (ContextT GLFWWindow os f IO) () (V2 Float)
+pos = integral 0 . vel
+
 
 -------------------------------------------------------------------------
 --Models--
