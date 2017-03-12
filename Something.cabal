@@ -22,3 +22,4 @@ executable Something
   build-depends:        linear, GPipe, lens, GPipe-GLFW, base == 4.9.*, time, transformers, containers, netwire
   hs-source-dirs:       src
   default-language:     Haskell2010
+  other-modules: Body, Constants, Game, Input, Shader, Util
