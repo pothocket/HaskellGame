@@ -36,7 +36,7 @@ main :: IO ()
 main = runContextT theWindow (ContextFormatColor RGB8) $ do
     vertexBuffer :: Buffer os (B2 Float, B3 Float) <- newBuffer 4
     posBuffer :: Buffer os (B2 Float) <- newBuffer 1
-    writeBuffer vertexBuffer 0 $ map (,(V3 1 1 1)) (map ((+(V2 1 (0))) . toGLPos) myTriangle)
+    writeBuffer vertexBuffer 0 $ map ((, V3 1 1 1) . (+V2 1 0) . toGLPos) myTriangle
     writeBuffer posBuffer 0 $ fmap toGLPos [V2 100 250]
 
     lift $ hSetBuffering stdout NoBuffering
@@ -45,21 +45,14 @@ main = runContextT theWindow (ContextFormatColor RGB8) $ do
     shader <- compileShader myShader
     loop vertexBuffer posBuffer initWorld shader clockSession_ pos
 
-speed :: Wire s () IO a Float
-speed = pure 50
-
-pos :: HasTime t s => Wire s () IO a (V2 Float)
-pos = V2 <$> integral 0 . speed <*> 0
-
-
 loop :: (Num a, Color c Float ~ V3 a, ContextColorFormat c, b2 ~ (b,b1),
-         b ~ (B2 Float, B3 Float), b1 ~ B2 Float, HasTime t s)
+         b ~ (B2 Float, B3 Float), b1 ~ B2 Float, HasTime t s, f ~ ContextFormat c ds)
      => Buffer os b
      -> Buffer os b1
      -> World
-     -> CompiledShader os (ContextFormat c ds) (PrimitiveArray Triangles b2)
+     -> CompiledShader os f (PrimitiveArray Triangles b2)
      -> Session IO s
-     -> Wire s e IO a (V2 Float)
+     -> Wire s e (ContextT GLFWWindow os f IO) () (V2 Float)
      -> ContextT GLFWWindow os (ContextFormat c ds) IO ()
 loop vb pb world shader session wire = do
     let ent =  world ^. player
@@ -73,7 +66,7 @@ loop vb pb world shader session wire = do
     swapContextBuffers
 
     (st', session') <- liftIO $ stepSession session
-    (wt', wire') <- liftIO $ stepWire wire st' $ Right undefined
+    (wt', wire') <- stepWire wire st' $ Right undefined
 
     let p = case wt' of
               Right vec -> vec
@@ -82,11 +75,7 @@ loop vb pb world shader session wire = do
     writeBuffer vb 0 (ent ^. eInfo . eModel . to snd)
     writeBuffer pb 0 [p]
 
-    let states :: ContextT GLFWWindow os f IO [KeyState]
-        states = sequence $ map (getKey . getControl) controls
-    let pairs :: ContextT GLFWWindow os f IO [(Control, KeyState)]
-        pairs = zip <$> pure controls <*> states
-    controlState <- fmap (map fst . filter ((==KeyState'Pressed) . snd)) pairs
+    controlState <- getControlState
 
     time2 <- liftIO getTimeMS
     let dt = time2 - time1
