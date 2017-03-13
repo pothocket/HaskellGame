@@ -1,4 +1,4 @@
-name:                 Something
+name:                 HaskellGame
 version:              0.1.0.0
 synopsis:             
 -- description:
@@ -13,7 +13,7 @@ build-type:           Simple
 -- extra-source-files:
 cabal-version:        >=1.10
 
-executable Something
+executable HaskellGame
   ghc-options:
     -threaded
   main-is:              Main.hs
