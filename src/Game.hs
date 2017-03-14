@@ -2,7 +2,7 @@
 
 module Game where
 
-import Prelude hiding ((.))
+import Prelude hiding ((.), id, until)
 
 import Linear
 import Control.Lens
@@ -44,9 +44,7 @@ makeLenses ''EntityInfo
 initWorld :: World
 initWorld = World newBox [] 0
 
-world :: Wire s e (ContextT GLFWWindow os f IO) a World
-
-
+{-
 updateWorld :: ControlState -> Int -> World -> World
 updateWorld keys dt = foldr1 (.) [ processInput keys
                                  , player %~ updatePlayer dt
@@ -62,6 +60,7 @@ processInput cs = player . eInfo . eVel .~ V2 (5*xVel) (5*yVel)
           yVel | isDown cs C'Up    = -1
                | isDown cs C'Down  = 1
                | otherwise         = 0
+-}
 
 -------------------------------------------------------------------------
 --Entity Code--
@@ -82,15 +81,15 @@ handleCollisions = (eInfo . ePos) %~ \(V2 x y) -> V2 (clamp 0 (fWidth - 64) x) (
 
 vel :: Wire s () (ContextT GLFWWindow os f IO) a (V2 Float)
 vel = liftA2 V2 xVel yVel
-    where xVel =  pure pps . isKeyDown C'Right
-              <|> pure (-pps) . isKeyDown C'Left
-              <|> pure 0
-          yVel =  pure (-pps) . isKeyDown C'Up
-              <|> pure pps . isKeyDown C'Down
-              <|> pure 0
-          pps = 300 -- Pixels Per Second
+    where xVel =   speed . whileKeyPressed C'Right
+              <|> -speed . whileKeyPressed C'Left
+              <|> 0
+          yVel =   speed . whileKeyPressed C'Down
+              <|> -speed . whileKeyPressed C'Up
+              <|> 0
+          speed = 200 -- Pixels Per Second
 
-pos :: HasTime t s => Wire s () (ContextT GLFWWindow os f IO) () (V2 Float)
+pos :: HasTime t s => Wire s () (ContextT GLFWWindow os f IO) a (V2 Float)
 pos = integral 0 . vel
 
 
