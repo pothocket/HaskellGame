@@ -43,19 +43,18 @@ main = runContextT theWindow (ContextFormatColor RGB8) $ do
     setKeyCallback $ Just printKey
     
     shader <- compileShader myShader
-    loop vertexBuffer posBuffer initWorld shader clockSession_ pos
+    loop vertexBuffer posBuffer shader clockSession_ pos
 
 loop :: (Num a, Color c Float ~ V3 a, ContextColorFormat c, b2 ~ (b,b1),
          b ~ (B2 Float, B3 Float), b1 ~ B2 Float, HasTime t s, f ~ ContextFormat c ds)
      => Buffer os b
      -> Buffer os b1
-     -> World
      -> CompiledShader os f (PrimitiveArray Triangles b2)
      -> Session IO s
      -> Wire s e (ContextT GLFWWindow os f IO) () (V2 Float)
      -> ContextT GLFWWindow os (ContextFormat c ds) IO ()
-loop vb pb world shader session wire = do
-    let ent =  world ^. player
+loop vb pb shader session wire = do
+    let ent =  initWorld ^. player
     time1 <- liftIO getTimeMS
     render $ do
         clearContextColor (V3 0 0 0)
@@ -75,17 +74,9 @@ loop vb pb world shader session wire = do
     writeBuffer vb 0 (ent ^. eInfo . eModel . to snd)
     writeBuffer pb 0 [p]
 
-    controlState <- getControlState
-
-    time2 <- liftIO getTimeMS
-    let dt = time2 - time1
-        world' = foldr1 (.) [ updateWorld controlState dt
-                            , timeMS +~ dt
-                            ] world
-
     closeRequested <- GLFW.windowShouldClose
     unless closeRequested $
-        loop vb pb world' shader session' wire'
+        loop vb pb shader session' wire'
 
 printKey :: Key -> Int -> KeyState -> ModifierKeys -> IO ()
 printKey k i s m = putStrLn $ show m ++ "\n" ++ show k ++ " (" ++ show i ++ ") " ++ show s
