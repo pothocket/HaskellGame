@@ -1,20 +1,20 @@
 {-# LANGUAGE TypeFamilies #-}
-module Input where
+module Input (Control(..), keyPressed, keyReleased, whileKeyPressed) where
 
-import Prelude hiding ((.))
+import Prelude hiding ((.), id)
 
 import Graphics.GPipe.Context.GLFW.Input
 import Graphics.GPipe.Context.GLFW (GLFWWindow)
 import Graphics.GPipe.Context (ContextT)
 
-import Control.Wire
+import Control.Wire 
 
 import qualified Data.Map.Strict as M
 
 data Control = C'Up | C'Down | C'Left | C'Right deriving Eq
 type ControlState = [Control]
 
-type KeyEvent = Event Control
+type KeyEvent = Event ControlState
 
 controls :: [Control]
 controls = [C'Up, C'Down, C'Left, C'Right]
@@ -34,12 +34,20 @@ getControlState = do
         pairs = zip <$> pure controls <*> states
     fmap (map fst . filter((==KeyState'Pressed) . snd)) pairs
 
-isDown :: ControlState -> Control -> Bool
-isDown = flip elem
+isDown :: Control -> ControlState -> Bool
+isDown = elem
 
-isKeyDown :: Control -> Wire s () (ContextT GLFWWindow os f IO) a ()
-isKeyDown c = mkGen_ $ \_ -> do
-    controlState <- getControlState
-    return $ if isDown controlState c 
-             then Right ()
-             else Left ()
+keyStateChanged :: (m ~ ContextT GLFWWindow os f IO) => (Bool -> Bool) -> Control -> Wire s () m a KeyEvent
+keyStateChanged p control = eventWire . keyWire
+    where eventWire :: Wire s e m ControlState KeyEvent
+          eventWire = became (p <$> isDown control)
+          keyWire :: Wire s e (ContextT GLFWWindow os f IO) a ControlState
+          keyWire = mkGen_ $ \_ -> do
+              cs <- getControlState
+              return $ Right cs
+
+keyPressed = keyStateChanged id
+keyReleased = keyStateChanged not
+
+whileKeyPressed :: Control -> Wire s () (ContextT GLFWWindow os f IO) a () 
+whileKeyPressed c = between . liftA3 (,,) (pure ()) (keyPressed c) (keyReleased c)
