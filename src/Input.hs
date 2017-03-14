@@ -42,9 +42,7 @@ keyStateChanged p control = eventWire . keyWire
     where eventWire :: Wire s e m ControlState KeyEvent
           eventWire = became (p <$> isDown control)
           keyWire :: Wire s e (ContextT GLFWWindow os f IO) a ControlState
-          keyWire = mkGen_ $ \_ -> do
-              cs <- getControlState
-              return $ Right cs
+          keyWire = mkGen_ $ const (Right <$> getControlState)
 
 keyPressed = keyStateChanged id
 keyReleased = keyStateChanged not
